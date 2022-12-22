@@ -2,7 +2,6 @@
 
 [![Lint](https://github.com/ga-lep/install/actions/workflows/ansible-lint.yml/badge.svg?branch=main)](https://github.com/ga-lep/install/actions/workflows/ansible-lint.yml)
 
-## ansible-playbooks
 Ansible playbooks to setup initial configurations, install various utilities, and security tools to localhost.
 
 ## Playbooks
