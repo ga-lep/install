@@ -1,4 +1,4 @@
-- name: deb-utils
+- name: Apt packages
   hosts: localhost
   connection: local
   become: true
@@ -12,10 +12,10 @@
       - bat
       - jq
   tasks:
-    - name: install deb-utils packages
-      apt:
+    - name: Install apt packages
+      ansible.builtin.apt:
         name: "{{ item }}"
-        state: latest
+        state: present
       loop: "{{ packages }}"
   tags:
     - deb-utils
@@ -30,15 +30,15 @@
       - just
   tasks:
     - name: Download Installer
-      get_url:
+      ansible.builtin.get_url:
         url: https://sh.rustup.rs
         dest: /tmp/sh.rustup.rs
         mode: '0755'
         force: 'yes'
     - name: Install rust/cargo
-      shell: /tmp/sh.rustup.rs -y
+      ansible.builtin.script: /tmp/sh.rustup.rs -y
 #    - name: Install rust packages
-#      community.general.cargo:
+#      community.general.cargomode: '0755':
 #        name: "{{ item }}"
 #        state: latest
 #      loop: "{{ packages }}"
@@ -53,27 +53,35 @@
     user: galep
   tasks:
     - name: Download Installer
-      get_url:
+      ansible.builtin.get_url:
         url: https://sw.kovidgoyal.net/kitty/installer.sh
         dest: /tmp/kitty-installer.sh
-        mode: '0755'
+        mode: '0544'
         force: 'yes'
     - name: Install kitty
-      shell: /tmp/kitty-installer.sh
+      ansible.builtin.script: /tmp/kitty-installer.sh
     - name: Create a symbolic link to add kitty to PATH
-      file:
+      ansible.builtin.file:
         src: /home/{{ user }}/.local/kitty.app/bin/kitty
         dest: /home/{{ user }}/.local/bin/kitty
         state: link
-        force: yes
+        mode: '0744'
+        force: true
     - name: Place the kitty.desktop file somewhere it can be found by the OS
-      copy:
+      ansible.builtin.copy:
         src: ~/.local/kitty.app/share/applications/kitty.desktop
         dest: ~/.local/share/applications/
-    - name: Update the paths to the kitty and its icon in the kitty.desktop file(s)
-      shell: |
-        sed -i "s|Icon=kitty|Icon=/home/{{ user }}/.local/kitty.app/share/icons/hicolor/256x256/apps/kitty.png|g" ~/.local/share/applications/kitty*.desktop
-        sed -i "s|Exec=kitty|Exec=/home/{{ user }}/.local/kitty.app/bin/kitty|g" ~/.local/share/applications/kitty*.desktop
+        mode: '0755'
+    - name: Update the paths to the icon in the kitty.desktop file(s)
+      ansible.builtin.lineinfile:
+        path: /home/{{ user }}/.local/share/applications/kitty*.desktop
+        search_string: 'Icon=kitty'
+        line: 'Icon=/home/{{ user }}/.local/kitty.app/share/icons/hicolor/256x256/apps/kitty.png'
+    - name: Update the paths to the binary in the kitty.desktop file(s)
+      ansible.builtin.lineinfile:
+        path: /home/{{ user }}/.local/share/applications/kitty*.desktop
+        search_string: 'Exec=kitty'
+        line: 'Exec=/home/{{ user }}/.local/kitty.app/bin/kitty'
   tags:
     - kitty
 
@@ -81,18 +89,21 @@
   hosts: localhost
   connection: local
   become: true
-  gather_facts: no
+  gather_facts: false
   tasks:
     - name: Get lazygit version
-      shell: curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | grep '"tag_name":' |  sed -E 's/.*"v*([^"]+)".*/\1/'
+      ansible.builtin.shell: |
+        set -o pipefail && \
+        curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | grep '"tag_name":' |  sed -E 's/.*"v*([^"]+)".*/\1/'
       register: lazygit_version
-    - debug: var=lazygit_version.stdout_lines
+      changed_when: false
     - name: Download archive
-      get_url:
+      ansible.builtin.get_url:
         url: https://github.com/jesseduffield/lazygit/releases/latest/download/lazygit_{{ lazygit_version.stdout_lines[0] }}_Linux_x86_64.tar.gz
         dest: /tmp/lazygit.tar.gz
+        mode: '0544'
     - name: Install lazygit
-      unarchive:
+      ansible.builtin.unarchive:
         src: /tmp/lazygit.tar.gz
         dest: /usr/local/bin
   tags:
