@@ -36,7 +36,8 @@
         mode: '0755'
         force: 'yes'
     - name: Install rust/cargo
-      ansible.builtin.script: /tmp/sh.rustup.rs -y
+      ansible.builtin.script:
+        cmd: /tmp/sh.rustup.rs -y
 #    - name: Install rust packages
 #      community.general.cargomode: '0755':
 #        name: "{{ item }}"
@@ -59,7 +60,8 @@
         mode: '0544'
         force: 'yes'
     - name: Install kitty
-      ansible.builtin.script: /tmp/kitty-installer.sh
+      ansible.builtin.script:
+        cmd: /tmp/kitty-installer.sh
     - name: Create a symbolic link to add kitty to PATH
       ansible.builtin.file:
         src: /home/{{ user }}/.local/kitty.app/bin/kitty
@@ -92,9 +94,9 @@
   gather_facts: false
   tasks:
     - name: Get lazygit version
-      ansible.builtin.shell: |
-        set -o pipefail && \
-        curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | grep '"tag_name":' |  sed -E 's/.*"v*([^"]+)".*/\1/'
+      ansible.builtin.script:
+        cmd: |
+          curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | grep '"tag_name":' |  sed -E 's/.*"v*([^"]+)".*/\1/'
       register: lazygit_version
       changed_when: false
     - name: Download archive
