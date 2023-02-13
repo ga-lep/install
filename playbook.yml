@@ -1,3 +1,19 @@
+
+- name: Setup
+  hosts: localhost
+  connection: local
+  vars:
+    user: galep
+    directories:
+      - perso
+      - projects
+  tasks:
+    - name: Create directories
+      ansible.builtin.file:
+        path: /home/{{ user }}/{{ item }}
+        state: directory
+      loop: "{{ directories }}"
+
 - name: Apt packages
   hosts: localhost
   connection: local
@@ -11,6 +27,7 @@
       - exa
       - bat
       - jq
+      - gdb
   tasks:
     - name: Install apt packages
       ansible.builtin.apt:
@@ -45,6 +62,34 @@
 #      loop: "{{ packages }}"
   tags:
     - rust
+
+- name: Golang
+  hosts: localhost
+  connection: local
+  vars:
+    package:
+      - glow
+  tasks:
+    - name: Remove previous Golang installation
+      ansible.builtin.file:
+        path: /usr/local/go
+        state: absent
+    - name: Download Installer
+      ansible.builtin.get_url:
+        url: https://go.dev/dl/go1.19.4.linux-amd64.tar.gz
+        dest: /tmp/go1.19.4.linux-amd64.tar.gz
+        mode: '0544'
+        force: 'yes'
+    - name: Install Go
+      ansible.builtin.unarchive:
+        src: /tmp/go1.19.4.linux-amd64.tar.gz
+        creates: /usr/local/bin/go/
+        dest: /usr/local/bin/go
+    - name: Install go packages
+      command: go get {{ item }}
+      loop: "{{ packages }}"
+  tags:
+    - go
 
 - name: Kitty
   hosts: localhost
@@ -95,10 +140,8 @@
   tasks:
     - name: Get lazygit version
       ansible.builtin.script:
-        cmd: |
-          curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | grep '"tag_name":' |  sed -E 's/.*"v*([^"]+)".*/\1/'
+        cmd: curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | grep '"tag_name":' |  sed -E 's/.*"v*([^"]+)".*/\1/'
       register: lazygit_version
-      changed_when: false
     - name: Download archive
       ansible.builtin.get_url:
         url: https://github.com/jesseduffield/lazygit/releases/latest/download/lazygit_{{ lazygit_version.stdout_lines[0] }}_Linux_x86_64.tar.gz
@@ -110,3 +153,14 @@
         dest: /usr/local/bin
   tags:
     - lazygit
+
+# https://github.com/pwndbg/pwndbg
+- name: pwndbg
+  hosts: localhost
+  connection: local
+  become: true
+  tasks:
+    - name: Clone pwndbg repository
+      ansible.builtin.git:
+        repo: https://github.com/pwndbg/pwndbg
+        dest: /home/{{ user }}/projects

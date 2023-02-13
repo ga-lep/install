@@ -29,12 +29,17 @@ $ sudo ansible-playbook playbook.yml --list-tasks
 
 Install or skip specific tasks:
 ```bash
-$ sudo ansible-playbook play_apt.yml --tags "deb-utils,rust"
-$ sudo ansible-playbook play_apt.yml --skip-tags "kitty"
+$ sudo ansible-playbook playbook.yml --tags "deb-utils,rust"
+$ sudo ansible-playbook playbook.yml --skip-tags "kitty"
 ```
 
 Run playbook and all install tools to localhost:
 
 ```bash
-$ sudo ansible-playbook play_apt.yml
+$ sudo ansible-playbook playbook.yml
 ```
+
+## Todo
+
+- Use inventory file
+- Dynamically get go latest version/
