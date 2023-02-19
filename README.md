@@ -13,6 +13,7 @@ Packages to be installed prior to running the playbooks.
 ```bash
 $ apt update
 $ apt -y install python-apt ansible
+$ ansible-galaxy collection install community.general
 ```
 
 ### Examples

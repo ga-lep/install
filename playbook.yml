@@ -40,74 +40,56 @@
 - name: Rust
   hosts: localhost
   connection: local
-  become: true
   vars:
     packages:
       - rm-improved
       - just
   tasks:
+    - name: Check if cargo is installed
+      ansible.builtin.shell: command -v cargo
+      register: cargo_exists
+      ignore_errors: yes
     - name: Download Installer
+      when: cargo_exists is failed
       ansible.builtin.get_url:
         url: https://sh.rustup.rs
         dest: /tmp/sh.rustup.rs
         mode: '0755'
         force: 'yes'
     - name: Install rust/cargo
+      when: cargo_exists is failed
       ansible.builtin.script:
         cmd: /tmp/sh.rustup.rs -y
-#    - name: Install rust packages
-#      community.general.cargomode: '0755':
-#        name: "{{ item }}"
-#        state: latest
-#      loop: "{{ packages }}"
-  tags:
-    - rust
-
-- name: Golang
-  hosts: localhost
-  connection: local
-  vars:
-    package:
-      - glow
-  tasks:
-    - name: Remove previous Golang installation
-      ansible.builtin.file:
-        path: /usr/local/go
-        state: absent
-    - name: Download Installer
-      ansible.builtin.get_url:
-        url: https://go.dev/dl/go1.19.4.linux-amd64.tar.gz
-        dest: /tmp/go1.19.4.linux-amd64.tar.gz
-        mode: '0544'
-        force: 'yes'
-    - name: Install Go
-      ansible.builtin.unarchive:
-        src: /tmp/go1.19.4.linux-amd64.tar.gz
-        creates: /usr/local/bin/go/
-        dest: /usr/local/bin/go
-    - name: Install go packages
-      command: go get {{ item }}
+    - name: Install rust packages
+      community.general.cargo:
+        name: "{{ item }}"
       loop: "{{ packages }}"
   tags:
-    - go
+    - rust
 
 - name: Kitty
   hosts: localhost
   connection: local
-  become: true
   vars:
     user: galep
   tasks:
+    - name: Check if kitty is installed
+      ansible.builtin.shell: command -v kitty
+      register: kitty_exists
+      ignore_errors: yes
     - name: Download Installer
+      when: kitty_exists is failed
       ansible.builtin.get_url:
         url: https://sw.kovidgoyal.net/kitty/installer.sh
         dest: /tmp/kitty-installer.sh
         mode: '0544'
         force: 'yes'
     - name: Install kitty
+      when: kitty_exists is failed
       ansible.builtin.script:
         cmd: /tmp/kitty-installer.sh
     - name: Create a symbolic link to add kitty to PATH
+      when: kitty_exists is failed
       ansible.builtin.file:
         src: /home/{{ user }}/.local/kitty.app/bin/kitty
         dest: /home/{{ user }}/.local/bin/kitty
@@ -115,16 +97,19 @@
         mode: '0744'
         force: true
     - name: Place the kitty.desktop file somewhere it can be found by the OS
+      when: kitty_exists is failed
       ansible.builtin.copy:
         src: ~/.local/kitty.app/share/applications/kitty.desktop
         dest: ~/.local/share/applications/
         mode: '0755'
     - name: Update the paths to the icon in the kitty.desktop file(s)
+      when: kitty_exists is failed
       ansible.builtin.lineinfile:
         path: /home/{{ user }}/.local/share/applications/kitty*.desktop
         search_string: 'Icon=kitty'
         line: 'Icon=/home/{{ user }}/.local/kitty.app/share/icons/hicolor/256x256/apps/kitty.png'
     - name: Update the paths to the binary in the kitty.desktop file(s)
+      when: kitty_exists is failed
       ansible.builtin.lineinfile:
         path: /home/{{ user }}/.local/share/applications/kitty*.desktop
         search_string: 'Exec=kitty'
@@ -132,10 +117,37 @@
   tags:
     - kitty
 
+- name: Glow
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Check if glow is installed
+      ansible.builtin.shell: command -v glow
+      register: glow_exists
+      ignore_errors: yes
+    - name: Get glow version
+      when: glow_exists is failed
+      ansible.builtin.script:
+        cmd: curl -s "https://api.github.com/repos/charmbracelet/glow/releases/latest" | grep '"tag_name":' |  sed -E 's/.*"v*([^"]+)".*/\1/'
+      register: latest_version
+    - name: Download archive
+      when: glow_exists is failed
+      ansible.builtin.get_url:
+        url: https://github.com/charmbracelet/glow/releases/latest/download/glow_{{ latest_version.stdout_lines[0] }}_Darwin_x86_64.tar.gz
+        dest: /tmp/glow.tar.gz
+        mode: '0544'
+    - name: Install lazygit
+      when: glow_exists is failed
+      ansible.builtin.unarchive:
+        src: /tmp/glow.tar.gz
+        dest: /usr/local/bin
+  tags:
+    - glow
+
 - name: Lazygit
   hosts: localhost
   connection: local
-  become: true
   gather_facts: false
   tasks:
     - name: Get lazygit version
